@@ -2,105 +2,230 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Hatch Calculator</title>
+<title>Pet Ultimate – Accurate Secret Hatch Calculator</title>
 
 <style>
 body {
-  background: #0f141a;
-  color: #eaeaea;
-  font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 20px;
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#0f0f14;
+  color:#eaeaea;
+  display:flex;
+  justify-content:center;
+  padding:20px;
 }
-
-.box {
-  max-width: 800px;
-  margin: auto;
+.container {width:100%;max-width:720px;}
+.section {
+  background:#1c1c26;
+  padding:20px;
+  border-radius:12px;
+  margin-bottom:15px;
 }
-
-input, button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  font-size: 16px;
+h2 {margin-top:0;text-align:center;}
+.inputs {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
 }
-
+.input-group {
+  display:flex;
+  flex-direction:column;
+}
+label {font-size:13px;margin-bottom:4px;}
+input, select {
+  padding:7px;
+  font-size:14px;
+  border-radius:6px;
+  border:1px solid #333;
+  background:#0f0f14;
+  color:#eaeaea;
+}
 button {
-  cursor: pointer;
+  width:100%;
+  margin-top:12px;
+  padding:10px;
+  font-size:16px;
+  font-weight:bold;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background:linear-gradient(90deg,#00aaff,#0066cc);
+  color:white;
 }
-
 pre {
-  margin-top: 20px;
-  white-space: pre-wrap;
+  background:#0f0f14;
+  border:1px solid #333;
+  border-radius:6px;
+  padding:10px;
+  margin-top:10px;
+  white-space:pre-wrap;
+  font-size:14px;
+}
+@media(max-width:600px){
+  .inputs{grid-template-columns:1fr;}
 }
 </style>
 </head>
 
 <body>
-<div class="box">
-  <input id="input" placeholder="Example: 1/25k 18.2 7">
-  <button onclick="calculate()">Calculate</button>
-  <pre id="output"></pre>
+<div class="container">
+
+<h2>🐣 Pet Ultimate – Accurate Hatch Calculator</h2>
+
+<!-- SINGLE PET -->
+<div class="section">
+<h3>Single Pet Expected Time</h3>
+<div class="inputs">
+  <div class="input-group">
+    <label>Pet Rarity (1/X)</label>
+    <input id="rarity" placeholder="1/25000 or 25k">
+  </div>
+  <div class="input-group">
+    <label>Total Luck 🍀</label>
+    <input id="luck" type="number" value="1">
+  </div>
+  <div class="input-group">
+    <label>Eggs per Batch 🥚</label>
+    <input id="eggs" type="number" placeholder="ex: 8">
+  </div>
+  <div class="input-group">
+    <label>Seconds per Batch ⏱</label>
+    <input id="speed" type="number" value="2.57">
+  </div>
+</div>
+<button onclick="calcSingle()">Calculate</button>
+<pre id="singleOut"></pre>
+</div>
+
+<!-- SIMULATOR -->
+<div class="section">
+<h3>Hatch Simulator (True RNG)</h3>
+<div class="inputs">
+  <div class="input-group">
+    <label>Egg Type</label>
+    <select id="eggSelect"></select>
+  </div>
+  <div class="input-group">
+    <label>Total Luck 🍀</label>
+    <input id="simLuck" type="number" value="1">
+  </div>
+  <div class="input-group">
+    <label>Eggs per Batch 🥚</label>
+    <input id="simEggs" type="number" value="8">
+  </div>
+  <div class="input-group">
+    <label>Batches to Simulate</label>
+    <input id="batches" type="number" value="1000">
+  </div>
+</div>
+<button onclick="simulate()">Simulate</button>
+<pre id="simOut"></pre>
+</div>
+
 </div>
 
 <script>
-function parseRarity(text) {
-  text = text.toLowerCase().trim();
-
-  if (text.includes("/")) {
-    let parts = text.split("/");
-    let num = Number(parts[0]);
-    let den = parts[1].replace("k", "000");
-
-    return Number(den) / num;
-  }
-
-  let value = Number(text);
-  if (value > 0 && value < 1) {
-    return 1 / value;
-  }
-
-  return NaN;
+// ---------------- HELPERS ----------------
+function parseRarity(v){
+  if(!v) return null;
+  v=v.toLowerCase().replace(/,/g,'').trim();
+  if(v.includes('/')) return Number(v.split('/')[1]);
+  if(v.endsWith('k')) return Number(v.replace('k',''))*1000;
+  if(v.endsWith('m')) return Number(v.replace('m',''))*1_000_000;
+  return Number(v);
 }
 
-function calculate() {
-  const parts = document.getElementById("input").value.trim().split(" ");
-  if (parts.length !== 3) {
-    document.getElementById("output").textContent =
-      "Enter exactly: rarity luck eggs\nExample: 1/25k 18.2 7";
+function formatTime(sec){
+  if(sec<60) return sec.toFixed(2)+" seconds";
+  if(sec<3600) return (sec/60).toFixed(2)+" minutes";
+  if(sec<86400) return (sec/3600).toFixed(2)+" hours";
+  return (sec/86400).toFixed(2)+" days";
+}
+
+// ---------------- EGG DATA ----------------
+const eggsData = {
+  "Blossom":[
+    {name:"Blossom Dominus",chance:1000},
+    {name:"Flower Trophy",chance:100000},
+    {name:"Eternal Flower",chance:500000}
+  ],
+  "Fire Ring":[
+    {name:"Festival Bunny",chance:100},
+    {name:"Festival Dragon",chance:1000},
+    {name:"Fire Ring Lion",chance:100000},
+    {name:"Ultra Dice",chance:500000}
+  ]
+};
+
+// Populate select
+const sel=document.getElementById("eggSelect");
+Object.keys(eggsData).forEach(e=>{
+  let o=document.createElement("option");
+  o.value=o.textContent=e;
+  sel.appendChild(o);
+});
+
+// ---------------- SINGLE PET ----------------
+function calcSingle(){
+  const base=parseRarity(document.getElementById("rarity").value);
+  const luck=+document.getElementById("luck").value||1;
+  const eggs=+document.getElementById("eggs").value;
+  const speed=+document.getElementById("speed").value||2.57;
+  const out=document.getElementById("singleOut");
+
+  if(!base||!eggs){
+    out.textContent="Please enter valid rarity and eggs per batch.";
     return;
   }
 
-  const base = parseRarity(parts[0]);
-  const luck = Number(parts[1]);
-  const eggs = Number(parts[2]);
+  const effective=base/luck;
+  const expectedEggs=effective;
+  const batches=expectedEggs/eggs;
+  const time=batches*speed;
 
-  if (!base || !luck || !eggs) {
-    document.getElementById("output").textContent =
-      "Invalid numbers. Check your input.";
-    return;
+  out.textContent=
+`Effective Odds: 1/${Math.round(effective).toLocaleString()}
+Expected Eggs Needed: ${Math.round(expectedEggs).toLocaleString()}
+Expected Batches: ${batches.toFixed(2)}
+Estimated Time: ${formatTime(time)}`;
+}
+
+// ---------------- SIMULATOR ----------------
+function simulate(){
+  const egg=sel.value;
+  const luck=+document.getElementById("simLuck").value||1;
+  const eggsPerBatch=+document.getElementById("simEggs").value||1;
+  const batches=+document.getElementById("batches").value||1000;
+  const out=document.getElementById("simOut");
+
+  const pets=eggsData[egg];
+  const weights=pets.map(p=>1/(p.chance/luck));
+  const totalWeight=weights.reduce((a,b)=>a+b,0);
+
+  const results={};
+  pets.forEach(p=>results[p.name]=0);
+
+  const totalEggs=batches*eggsPerBatch;
+
+  for(let i=0;i<totalEggs;i++){
+    let roll=Math.random()*totalWeight;
+    let sum=0;
+    for(let j=0;j<pets.length;j++){
+      sum+=weights[j];
+      if(roll<=sum){
+        results[pets[j].name]++;
+        break;
+      }
+    }
   }
 
-  const odds = base / luck;
-  const batches = odds / eggs;
-  const seconds = batches * 2.78;
+  let text=`Simulated Eggs: ${totalEggs.toLocaleString()}\n\n`;
+  pets.forEach(p=>{
+    const expected=totalEggs/(p.chance/luck);
+    text+=`${p.name}\n  Hatched: ${results[p.name]}\n  Expected: ${expected.toFixed(2)}\n\n`;
+  });
 
-  let time;
-  if (seconds < 60) time = seconds.toFixed(2) + " seconds";
-  else if (seconds < 3600) time = (seconds / 60).toFixed(2) + " minutes";
-  else if (seconds < 86400) time = (seconds / 3600).toFixed(2) + " hours";
-  else time = (seconds / 86400).toFixed(2) + " days";
-
-  document.getElementById("output").textContent =
-`Chances: 1/${Math.round(odds).toLocaleString()}
-Time to Hatch: ~${time}
-
-How this was calculated:
-• Base rarity → 1/${Math.round(base).toLocaleString()}
-• Luck → ${luck}x
-• Eggs per batch → ${eggs}
-• 2.78 seconds per batch
-• Expected batches → ${Math.round(batches).toLocaleString()}`;
+  out.textContent=text;
 }
 </script>
 </body>
