@@ -152,9 +152,10 @@ body.light .progress-container {background:#d0d0d8;}
 </div>
 
 <script>
+window.addEventListener('DOMContentLoaded',()=>{
+
 // ================== ANNOUNCEMENT ==================
-const ANNOUNCEMENT_TEXT = "🔥If you have any ideas for this website, go to the feedback menu and let me know. Also, hatch the Blossom egg, limited 1/500k secret pet being removed soon.";
-document.getElementById('announcementBox').textContent = ANNOUNCEMENT_TEXT;
+document.getElementById('announcementBox').textContent = "🔥If you have any ideas for this website, go to the feedback menu and let me know. Also, hatch the Blossom egg, limited 1/500k secret pet being removed soon.";
 
 // ================== LIGHT/DARK TOGGLE ==================
 document.getElementById('toggleTheme').onclick = () => document.body.classList.toggle('light');
@@ -245,7 +246,7 @@ document.getElementById('multiCalcBtn').onclick=()=>{
 };
 document.getElementById('multiCopyBtn').onclick=()=>{navigator.clipboard.writeText(document.getElementById('multiOutput').textContent).then(()=>alert('Copied!'));};
 
-// ================== SIMULATOR WITH FAST MODE (FIXED MULTI-CLICK) ==================
+// ================== SIMULATOR ==================
 let simRunId = 0;
 document.getElementById('simBtn').onclick = async () => {
   simRunId++;
@@ -265,33 +266,24 @@ document.getElementById('simBtn').onclick = async () => {
   eggsData[egg].forEach(p => expected[p.name] = Math.round(batches / (p.chance / luck)));
 
   const render = () => {
-    if (currentRun !== simRunId) return; // stop if new run started
-    container.innerHTML = '';
-    eggsData[egg].forEach(p => {
-      const count = results[p.name];
-      const label = document.createElement('div');
-      label.textContent = `${p.name}: ${count} / Expected: ${expected[p.name]}`;
+    if(currentRun!==simRunId) return;
+    container.innerHTML='';
+    eggsData[egg].forEach(p=>{
+      const count=results[p.name];
+      const label=document.createElement('div');
+      label.textContent=`${p.name}: ${count} / Expected: ${expected[p.name]}`;
       container.appendChild(label);
-
-      const barCont = document.createElement('div'); barCont.className = 'progress-container';
-      const bar = document.createElement('div'); bar.className = 'progress-bar';
-      bar.style.backgroundColor = p.chance<=100?'#ff5555':p.chance<=1000?'#55aaff':'#55ff55';
-      bar.style.width = Math.max(2,(count/batches)*100)+'%';
+      const barCont=document.createElement('div'); barCont.className='progress-container';
+      const bar=document.createElement('div'); bar.className='progress-bar';
+      bar.style.backgroundColor=p.chance<=100?'#ff5555':p.chance<=1000?'#55aaff':'#55ff55';
+      bar.style.width=Math.max(2,(count/batches)*100)+'%';
       barCont.appendChild(bar);
-
-      const expBar = document.createElement('div'); expBar.className='progress-bar expected';
-      expBar.style.width = Math.max(2,(expected[p.name]/batches)*100)+'%';
-      expBar.style.backgroundColor = '#ffaa00';
+      const expBar=document.createElement('div'); expBar.className='progress-bar expected';
+      expBar.style.width=Math.max(2,(expected[p.name]/batches)*100)+'%';
+      expBar.style.backgroundColor='#ffaa00';
       barCont.appendChild(expBar);
-
       container.appendChild(barCont);
     });
   };
 
-  if (fast) {
-    for (let i=0;i<batches;i++){
-      eggsData[egg].forEach(p=>{if(Math.random()<(1/(p.chance/luck))) results[p.name]++;});
-    }
-    render();
-  } else {
-    for (let i=0;i<batches;i++){
+  if(fast
