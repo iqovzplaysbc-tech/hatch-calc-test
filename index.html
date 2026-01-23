@@ -61,7 +61,6 @@ body.light .version{color:#111;opacity:0.6;}
   <div class="tab" data-tab="sim">Hatch Simulator</div>
 </div>
 
-<!-- SINGLE CALCULATOR -->
 <div class="section active" id="single">
   <div class="inputs">
     <div class="input-group">
@@ -83,7 +82,6 @@ body.light .version{color:#111;opacity:0.6;}
   <pre id="output"></pre>
 </div>
 
-<!-- MULTI-EGG ODDS -->
 <div class="section" id="multi">
   <div class="inputs">
     <div class="input-group" style="grid-column:1/-1;">
@@ -98,7 +96,6 @@ body.light .version{color:#111;opacity:0.6;}
   <pre id="multiOutput"></pre>
 </div>
 
-<!-- HATCH SIMULATOR -->
 <div class="section" id="sim">
   <div class="inputs">
     <div class="input-group"><label>Egg Type 🥚</label><select id="simEggSelect"></select></div>
@@ -145,13 +142,12 @@ const eggsData={
 "Jester":[{name:"Pink Cotton Candy",chance:100},{name:"Blue Cotton Candy",chance:1000},{name:"Popcorn",chance:250000},{name:"Flying Jester",chance:1000000}]
 };
 
-[eggSelect,simEggSelect].forEach(sel=>{
+[document.getElementById('eggSelect'),document.getElementById('simEggSelect')].forEach(sel=>{
   Object.keys(eggsData).forEach(e=>{
     let o=document.createElement('option'); o.value=e; o.textContent=e; sel.appendChild(o);
   });
 });
 
-// Helpers
 function parseRarity(input){
   if(!input) return null;
   input=input.toLowerCase().replace(/,/g,'').trim();
@@ -164,49 +160,55 @@ function parseRarity(input){
 }
 function parseMulti(v){if(!v)return 1;v=v.toLowerCase().replace('x','');let n=parseFloat(v);return(!n||n<=0)?1:n;}
 
-// SINGLE CALCULATOR
-calcBtn.onclick=()=>{
-  const base=parseRarity(baseRarity.value);
-  const yourLuck=Number(yourLuck.value)||1;
-  const eventLuck=Number(eventLuck.value)||1;
-  const adminLuck=Number(adminLuck.value)||1;
-  const eggs=Number(eggsBatch.value);
-  const speed=(Number(hatchSpeed.value)||2.57)/parseMulti(speedMulti.value);
-  const out=document.getElementById('output');
-  if(!base||!eggs){out.textContent="Enter valid Base Rarity & Eggs per Batch"; return;}
-  const luck=yourLuck*eventLuck*adminLuck;
-  const odds=base/luck;
-  const batches=odds/eggs;
-  const totalSec=batches*speed;
+// SINGLE
+document.getElementById('calcBtn').onclick = ()=>{
+  const baseInput = document.getElementById('baseRarity').value;
+  const yourLuckVal = Number(document.getElementById('yourLuck').value) || 1;
+  const eventLuckVal = Number(document.getElementById('eventLuck').value) || 1;
+  const adminLuckVal = Number(document.getElementById('adminLuck').value) || 1;
+  const eggsVal = Number(document.getElementById('eggsBatch').value);
+  const speedVal = Number(document.getElementById('hatchSpeed').value) || 2.57;
+  const speedMultiplier = parseMulti(document.getElementById('speedMulti').value);
+  const out = document.getElementById('output');
+
+  const base = parseRarity(baseInput);
+  if(!base || !eggsVal){ out.textContent="Enter valid Base Rarity & Eggs per Batch"; return; }
+
+  const luck = yourLuckVal * eventLuckVal * adminLuckVal;
+  const odds = base / luck;
+  const batches = odds / eggsVal;
+  const totalSec = batches * (speedVal / speedMultiplier);
+
   let display;
-  if(totalSec<60) display=totalSec.toFixed(2)+' sec';
-  else if(totalSec<3600) display=(totalSec/60).toFixed(2)+' min';
-  else if(totalSec<86400) display=(totalSec/3600).toFixed(2)+' hrs';
-  else display=(totalSec/86400).toFixed(2)+' days';
-  out.textContent=`Luck: ${luck.toFixed(2)}x
+  if(totalSec<60) display = totalSec.toFixed(2)+' sec';
+  else if(totalSec<3600) display = (totalSec/60).toFixed(2)+' min';
+  else if(totalSec<86400) display = (totalSec/3600).toFixed(2)+' hrs';
+  else display = (totalSec/86400).toFixed(2)+' days';
+
+  out.textContent = `Luck: ${luck.toFixed(2)}x
 Chances: 1/${Math.round(odds).toLocaleString()}
 Time: ~${display}
-Per Batch Speed: ${speed.toFixed(2)} sec
+Per Batch Speed: ${(speedVal / speedMultiplier).toFixed(2)} sec
 Batches Needed: ${Math.round(batches).toLocaleString()}`;
 };
-copyBtn.onclick=()=>{navigator.clipboard.writeText(output.textContent).then(()=>alert('Copied!'));};
+document.getElementById('copyBtn').onclick = ()=>{navigator.clipboard.writeText(document.getElementById('output').textContent).then(()=>alert('Copied!'));};
 
 // MULTI
-multiCalcBtn.onclick=()=>{
-  const egg=eggSelect.value;
-  const luck=(+multiYourLuck.value||1)*(+multiEventLuck.value||1);
-  multiOutput.textContent=eggsData[egg].map(p=>`${p.name}: 1/${Math.round(p.chance/luck).toLocaleString()}`).join('\n');
+document.getElementById('multiCalcBtn').onclick = ()=>{
+  const egg=document.getElementById('eggSelect').value;
+  const luck=(+document.getElementById('multiYourLuck').value||1)*(+document.getElementById('multiEventLuck').value||1);
+  document.getElementById('multiOutput').textContent = eggsData[egg].map(p=>`${p.name}: 1/${Math.round(p.chance/luck).toLocaleString()}`).join('\n');
 };
-multiCopyBtn.onclick=()=>{navigator.clipboard.writeText(multiOutput.textContent).then(()=>alert('Copied!'));};
+document.getElementById('multiCopyBtn').onclick = ()=>{navigator.clipboard.writeText(document.getElementById('multiOutput').textContent).then(()=>alert('Copied!'));};
 
 // SIMULATOR
 let simRunId=0;
-simBtn.onclick=async()=>{
+document.getElementById('simBtn').onclick = async ()=>{
   simRunId++;
   const run=simRunId;
-  const egg=simEggSelect.value;
-  const luck=(+simYourLuck.value||1)*(+simEventLuck.value||1)*(+simAdminLuck.value||1);
-  const batches=+simBatches.value||100;
+  const egg=document.getElementById('simEggSelect').value;
+  const luck=(+document.getElementById('simYourLuck').value||1)*(+document.getElementById('simEventLuck').value||1)*(+document.getElementById('simAdminLuck').value||1);
+  const batches=+document.getElementById('simBatches').value||100;
   const fast=document.getElementById('fastMode').checked;
   const container=document.getElementById('simOutput'); container.innerHTML='';
   const results={}; eggsData[egg].forEach(p=>results[p.name]=0);
@@ -239,7 +241,7 @@ simBtn.onclick=async()=>{
     }
   }
 };
-simCopyBtn.onclick=()=>{navigator.clipboard.writeText(simOutput.textContent).then(()=>alert('Copied!'));};
+document.getElementById('simCopyBtn').onclick = ()=>{navigator.clipboard.writeText(document.getElementById('simOutput').textContent).then(()=>alert('Copied!'));};
 
 });
 </script>
