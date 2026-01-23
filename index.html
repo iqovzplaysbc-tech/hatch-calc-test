@@ -42,6 +42,8 @@ body.light .progress-container {background:#d0d0d8;}
 .progress-bar.expected {position:absolute;top:0;left:0;height:100%;border-radius:8px;opacity:0.5;background-color:#ffaa00;}
 .fast-mode {grid-column:1/-1;}
 @media(max-width:600px){.inputs{grid-template-columns:1fr;}}
+.version{position:fixed;bottom:12px;right:14px;font-size:16px;font-weight:bold;color:#ffffff;opacity:0.75;pointer-events:none;}
+body.light .version{color:#111;opacity:0.6;}
 </style>
 </head>
 <body>
@@ -59,29 +61,29 @@ body.light .progress-container {background:#d0d0d8;}
   <div class="tab" data-tab="sim">Hatch Simulator</div>
 </div>
 
-<!-- SINGLE -->
+<!-- SINGLE CALCULATOR -->
 <div class="section active" id="single">
   <div class="inputs">
     <div class="input-group">
-      <label>Base Rarity 🐣 <span class="info">ℹ<small class="tooltip">Supports 1/25k, % or multiplier format</small></span></label>
-      <input id="baseRarity">
+      <label>Base Rarity 🐣 <span class="info">ℹ<small class="tooltip">Supports 1/25k, 0.0002%, or "x x x" multiplier</small></span></label>
+      <input id="baseRarity" placeholder="1/25k, 25k, 0.0002% or '1 2 3'">
     </div>
     <div class="input-group">
-      <label>Your Luck 🍀</label>
-      <input id="yourLuck">
+      <label>Your Luck 🍀 <span class="info">ℹ<small class="tooltip">Add all luck multipliers from potions/upgrades. Do not include event luck here.</small></span></label>
+      <input id="yourLuck" placeholder="Example: 1.5 + 2 + 3 = 6.5">
     </div>
     <div class="input-group"><label>Event Luck 🎉</label><input id="eventLuck" type="number" value="1"></div>
     <div class="input-group"><label>Admin Abuse Luck 🛠️</label><input id="adminLuck" type="number" value="1"></div>
     <div class="input-group"><label>Eggs per Batch 🥚</label><input id="eggsBatch" type="number"></div>
-    <div class="input-group"><label>Hatch Speed ⏱️</label><input id="hatchSpeed" type="number" value="2.57"></div>
-    <div class="input-group"><label>Hatch Speed Multiplier 🚀</label><input id="speedMulti" placeholder="1x, 2x, 3x"></div>
+    <div class="input-group"><label>Base Hatch Speed ⏱️</label><input id="hatchSpeed" type="number" value="2.57"></div>
+    <div class="input-group"><label>Hatch Speed Multiplier 🚀</label><input id="speedMulti" placeholder="1x,2x,3x"></div>
   </div>
   <button id="calcBtn">Calculate</button>
   <button id="copyBtn">📋 Copy Output</button>
   <pre id="output"></pre>
 </div>
 
-<!-- MULTI -->
+<!-- MULTI-EGG ODDS -->
 <div class="section" id="multi">
   <div class="inputs">
     <div class="input-group" style="grid-column:1/-1;">
@@ -96,7 +98,7 @@ body.light .progress-container {background:#d0d0d8;}
   <pre id="multiOutput"></pre>
 </div>
 
-<!-- SIM -->
+<!-- HATCH SIMULATOR -->
 <div class="section" id="sim">
   <div class="inputs">
     <div class="input-group"><label>Egg Type 🥚</label><select id="simEggSelect"></select></div>
@@ -113,13 +115,13 @@ body.light .progress-container {background:#d0d0d8;}
 
 <div class="feedback"><a href="https://forms.gle/TbxWf1RvkZz3TZxo6" target="_blank">💬 Feedback</a></div>
 <div class="signature">By: iQovz</div>
-
-</div>
+<div class="version">v3.5</div>
 
 <script>
 window.addEventListener('DOMContentLoaded',()=>{
 
-announcementBox.textContent="🔥If you have any ideas, use feedback! Hatch the Blossom egg before it's gone.";
+document.getElementById('announcementBox').textContent =
+"🔥If you have ideas, use feedback. Hatch Blossom and Jester eggs before secret pets vanish!";
 
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.onclick=()=>{
@@ -129,7 +131,7 @@ document.querySelectorAll('.tab').forEach(tab=>{
   };
 });
 
-toggleTheme.onclick=()=>document.body.classList.toggle('light');
+document.getElementById('toggleTheme').onclick=()=>document.body.classList.toggle('light');
 
 const eggsData={
 "Basic":[{name:"Dragon",chance:100},{name:"Royal Blob",chance:100000}],
@@ -140,35 +142,104 @@ const eggsData={
 "Blossom":[{name:"Blossom Dominus",chance:1000},{name:"Flower Trophy",chance:100000},{name:"Eternal Flower",chance:500000}],
 "Magic":[{name:"Clown",chance:25000}],
 "Fire Ring":[{name:"Festival Bunny",chance:100},{name:"Festival Dragon",chance:1000},{name:"Fire Ring Lion",chance:100000},{name:"Ultra Dice",chance:500000}],
-"Jester":[
-  {name:"Pink Cotton Candy",chance:100},
-  {name:"Blue Cotton Candy",chance:1000},
-  {name:"Popcorn",chance:250000},
-  {name:"Flying Jester",chance:1000000}
-]
+"Jester":[{name:"Pink Cotton Candy",chance:100},{name:"Blue Cotton Candy",chance:1000},{name:"Popcorn",chance:250000},{name:"Flying Jester",chance:1000000}]
 };
 
 [eggSelect,simEggSelect].forEach(sel=>{
   Object.keys(eggsData).forEach(e=>{
-    let o=document.createElement('option');
-    o.value=e;o.textContent=e;sel.appendChild(o);
+    let o=document.createElement('option'); o.value=e; o.textContent=e; sel.appendChild(o);
   });
 });
 
-function parseSpeedMulti(v){if(!v)return 1;v=v.toLowerCase().replace('x','');let n=parseFloat(v);return(!n||n<=0)?1:n;}
-function parseRarity(i){if(!i)return null;i=i.toLowerCase().replace(/,/g,'').trim();if(i.includes('/'))return Number(i.split('/')[1]);return Number(i);}
+// Helpers
+function parseRarity(input){
+  if(!input) return null;
+  input=input.toLowerCase().replace(/,/g,'').trim();
+  if(input.includes(' ')){let p=input.split(' ').map(Number); if(p.length===3) return Math.round(25000/p[0]*p[1]*p[2]);}
+  if(input.endsWith('%')) return Math.round(1/(Number(input.replace('%',''))/100));
+  if(input.includes('/')){let d=input.split('/')[1]; if(d.endsWith('k')) return Number(d.replace('k',''))*1000; if(d.endsWith('m')) return Number(d.replace('m',''))*1e6; return Number(d);}
+  if(input.endsWith('k')) return Number(input.replace('k',''))*1000;
+  if(input.endsWith('m')) return Number(input.replace('m',''))*1e6;
+  let val=Number(input); if(val>0 && val<1) return Math.round(1/val); return val;
+}
+function parseMulti(v){if(!v)return 1;v=v.toLowerCase().replace('x','');let n=parseFloat(v);return(!n||n<=0)?1:n;}
 
+// SINGLE CALCULATOR
 calcBtn.onclick=()=>{
   const base=parseRarity(baseRarity.value);
-  const luck=(+yourLuck.value||1)*(+eventLuck.value||1)*(+adminLuck.value||1);
-  const eggs=+eggsBatch.value;
-  const speed=(+hatchSpeed.value||2.57)/parseSpeedMulti(speedMulti.value);
-  if(!base||!eggs){output.textContent="Enter valid values";return;}
+  const yourLuck=Number(yourLuck.value)||1;
+  const eventLuck=Number(eventLuck.value)||1;
+  const adminLuck=Number(adminLuck.value)||1;
+  const eggs=Number(eggsBatch.value);
+  const speed=(Number(hatchSpeed.value)||2.57)/parseMulti(speedMulti.value);
+  const out=document.getElementById('output');
+  if(!base||!eggs){out.textContent="Enter valid Base Rarity & Eggs per Batch"; return;}
+  const luck=yourLuck*eventLuck*adminLuck;
   const odds=base/luck;
   const batches=odds/eggs;
-  const total=batches*speed;
-  output.textContent=`Luck: ${luck}x\nOdds: 1/${Math.round(odds)}\nTime: ${(total/3600).toFixed(2)} hrs`;
+  const totalSec=batches*speed;
+  let display;
+  if(totalSec<60) display=totalSec.toFixed(2)+' sec';
+  else if(totalSec<3600) display=(totalSec/60).toFixed(2)+' min';
+  else if(totalSec<86400) display=(totalSec/3600).toFixed(2)+' hrs';
+  else display=(totalSec/86400).toFixed(2)+' days';
+  out.textContent=`Luck: ${luck.toFixed(2)}x
+Chances: 1/${Math.round(odds).toLocaleString()}
+Time: ~${display}
+Per Batch Speed: ${speed.toFixed(2)} sec
+Batches Needed: ${Math.round(batches).toLocaleString()}`;
 };
+copyBtn.onclick=()=>{navigator.clipboard.writeText(output.textContent).then(()=>alert('Copied!'));};
+
+// MULTI
+multiCalcBtn.onclick=()=>{
+  const egg=eggSelect.value;
+  const luck=(+multiYourLuck.value||1)*(+multiEventLuck.value||1);
+  multiOutput.textContent=eggsData[egg].map(p=>`${p.name}: 1/${Math.round(p.chance/luck).toLocaleString()}`).join('\n');
+};
+multiCopyBtn.onclick=()=>{navigator.clipboard.writeText(multiOutput.textContent).then(()=>alert('Copied!'));};
+
+// SIMULATOR
+let simRunId=0;
+simBtn.onclick=async()=>{
+  simRunId++;
+  const run=simRunId;
+  const egg=simEggSelect.value;
+  const luck=(+simYourLuck.value||1)*(+simEventLuck.value||1)*(+simAdminLuck.value||1);
+  const batches=+simBatches.value||100;
+  const fast=document.getElementById('fastMode').checked;
+  const container=document.getElementById('simOutput'); container.innerHTML='';
+  const results={}; eggsData[egg].forEach(p=>results[p.name]=0);
+  const expected={}; eggsData[egg].forEach(p=>expected[p.name]=Math.round(batches/(p.chance/luck)));
+
+  const render=()=>{
+    if(run!==simRunId) return;
+    container.innerHTML='';
+    eggsData[egg].forEach(p=>{
+      const count=results[p.name];
+      const label=document.createElement('div'); label.textContent=`${p.name}: ${count} / Expected: ${expected[p.name]}`;
+      container.appendChild(label);
+      const barC=document.createElement('div'); barC.className='progress-container';
+      const bar=document.createElement('div'); bar.className='progress-bar'; bar.style.backgroundColor=p.chance<=100?'#ff5555':p.chance<=1000?'#55aaff':'#55ff55'; bar.style.width=Math.max(2,(count/batches)*100)+'%';
+      barC.appendChild(bar);
+      const expBar=document.createElement('div'); expBar.className='progress-bar expected'; expBar.style.width=Math.max(2,(expected[p.name]/batches)*100)+'%'; expBar.style.backgroundColor='#ffaa00';
+      barC.appendChild(expBar);
+      container.appendChild(barC);
+    });
+  };
+
+  if(fast){
+    for(let i=0;i<batches;i++){eggsData[egg].forEach(p=>{if(Math.random()<(1/(p.chance/luck))) results[p.name]++;});}
+    render();
+  }else{
+    for(let i=0;i<batches;i++){
+      if(run!==simRunId) return;
+      eggsData[egg].forEach(p=>{if(Math.random()<(1/(p.chance/luck))) results[p.name]++;});
+      render(); await new Promise(r=>setTimeout(r,10));
+    }
+  }
+};
+simCopyBtn.onclick=()=>{navigator.clipboard.writeText(simOutput.textContent).then(()=>alert('Copied!'));};
 
 });
 </script>
